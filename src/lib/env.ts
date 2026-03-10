@@ -39,8 +39,14 @@ function getEnv() {
     DEFAULT_AI_PROVIDER: process.env.DEFAULT_AI_PROVIDER || 'openai',
   };
 
-  // Skip validation during build
-  if (process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview') {
+  // Skip validation during build or when env vars are not set
+  // This allows the build to succeed while still validating at runtime
+  const isBuildTime = process.env.NODE_ENV !== 'production' ||
+    !process.env.NEXTAUTH_SECRET ||
+    !process.env.BASEROW_API_TOKEN ||
+    !process.env.BASEROW_TABLE_ID;
+
+  if (isBuildTime) {
     return env as Env;
   }
 

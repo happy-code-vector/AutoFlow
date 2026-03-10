@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       `Project ${Date.now()}`;
 
     // Create tasks in Baserow
-    const baserowTasks = tasks.map((task, index) => {
+    const baserowTasks = tasks.map((task) => {
       const row = taskToRow({
         projectId: projectTitle,
         order: task.order,
@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
         status: task.dependsOnOrder ? 'waiting' : 'pending',
       });
 
-      // Add user ID for tracking
       return {
         ...row,
         user_id: session.user.id,
@@ -85,8 +84,9 @@ export async function POST(request: NextRequest) {
     console.error('Generate API error:', error);
 
     if (error instanceof z.ZodError) {
+      const zodError = error as unknown as { errors: unknown[] };
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: zodError.errors },
         { status: 400 }
       );
     }

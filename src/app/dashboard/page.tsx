@@ -125,12 +125,10 @@ export default function DashboardPage() {
             Manage your content generation projects
           </p>
         </div>
-        <Button asChild>
-          <Link href="/create">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
-          </Link>
-        </Button>
+        <Link href="/create" className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80">
+          <PlusCircle className="h-4 w-4" />
+          New Project
+        </Link>
       </div>
 
       {isLoading && (
@@ -159,12 +157,10 @@ export default function DashboardPage() {
             <p className="text-muted-foreground mb-4">
               Create your first content project to get started
             </p>
-            <Button asChild>
-              <Link href="/create">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Content
-              </Link>
-            </Button>
+            <Link href="/create" className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80">
+              <PlusCircle className="h-4 w-4" />
+              Create Content
+            </Link>
           </CardContent>
         </Card>
       )}
