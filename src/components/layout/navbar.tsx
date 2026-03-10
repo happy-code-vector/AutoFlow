@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -58,6 +59,7 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center space-x-4">
+          <ThemeToggle />
           {session?.user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="relative h-8 w-8 rounded-full hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50">
