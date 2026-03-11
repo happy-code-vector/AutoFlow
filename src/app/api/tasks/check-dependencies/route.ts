@@ -5,7 +5,8 @@ import { baserow } from '@/lib/baserow';
 /**
  * GET /api/tasks/check-dependencies
  * Checks for waiting video tasks whose dependencies are completed
- * and updates their status to pending
+ * Collects ALL completed image URLs from the same project (with lower order)
+ * and updates their status to pending with reference images in Image URL field
  */
 export async function GET() {
   try {
@@ -14,30 +15,51 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all waiting tasks
+    // Get all tasks
     const response = await baserow.listRows({ size: 200 });
-    const waitingTasks = response.results.filter(
+    const allTasks = response.results;
+
+    // Find all waiting video tasks
+    const waitingTasks = allTasks.filter(
       row => row.Status === 'waiting' && row.step_type === 'video'
     );
 
     const updatedTasks: number[] = [];
 
-    for (const task of waitingTasks) {
-      // Check if this task has a dependency
-      if (task.depends_on_task_id) {
-        // Get the dependency task
-        const dependency = await baserow.getRow(task.depends_on_task_id);
+    for (const videoTask of waitingTasks) {
+      // Find all completed image tasks in the same project with lower order
+      const projectImages = allTasks.filter(
+        row =>
+          row.project_title === videoTask.project_title &&
+          row.step_type === 'image' &&
+          row.Status === 'completed' &&
+          row['Image URL'] &&
+          (row.task_order || 0) < (videoTask.task_order || 0)
+      );
 
-        // Check if dependency is completed and has an image URL
-        if (dependency.Status === 'completed' && dependency['Image URL']) {
-          // Update the waiting task to pending
-          await baserow.updateRow(task.id, {
-            Status: 'pending',
-            'Imagegen Reference': dependency['Image URL'],
-          });
-          updatedTasks.push(task.id);
-          console.log(`Updated task ${task.id} from waiting to pending`);
+      // Check if the specific dependency (if any) is completed
+      if (videoTask.depends_on_task_id) {
+        const dependency = allTasks.find(row => row.id === videoTask.depends_on_task_id);
+        if (!dependency || dependency.Status !== 'completed' || !dependency['Image URL']) {
+          // Dependency not ready, skip this task
+          continue;
         }
+      }
+
+      // Collect all image URLs (comma-separated as per documentation)
+      const imageUrls = projectImages
+        .map(img => img['Image URL'])
+        .filter(Boolean)
+        .join(',');
+
+      if (imageUrls) {
+        // Update the video task with reference images and set to pending
+        await baserow.updateRow(videoTask.id, {
+          Status: 'pending',
+          'Image URL': imageUrls,  // Comma-separated reference images
+        });
+        updatedTasks.push(videoTask.id);
+        console.log(`Updated video task ${videoTask.id} with ${projectImages.length} reference images`);
       }
     }
 
