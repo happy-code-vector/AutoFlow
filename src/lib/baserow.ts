@@ -82,6 +82,7 @@ export const baserow = {
     filter?: Record<string, string>;
   } = {}): Promise<BaserowListResponse> {
     const searchParams = new URLSearchParams();
+    searchParams.set('user_field_names', 'true');
 
     if (params.page) searchParams.set('page', String(params.page));
     if (params.size) searchParams.set('size', String(params.size));
@@ -93,21 +94,20 @@ export const baserow = {
       });
     }
 
-    const queryString = searchParams.toString();
-    const endpoint = `/database/rows/table/${BASEROW_TABLE_ID}/${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/database/rows/table/${BASEROW_TABLE_ID}/?${searchParams.toString()}`;
 
     return baserowFetch<BaserowListResponse>(endpoint);
   },
 
   // Get a single row by ID
   async getRow(rowId: number): Promise<BaserowRow> {
-    return baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/${rowId}/`);
+    return baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/${rowId}/?user_field_names=true`);
   },
 
   // Create a new row
   async createRow(data: Partial<BaserowRow>): Promise<BaserowRow> {
     console.log('Creating row with data:', JSON.stringify(data, null, 2));
-    const result = await baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/`, {
+    const result = await baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/?user_field_names=true`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -117,7 +117,7 @@ export const baserow = {
 
   // Update a row
   async updateRow(rowId: number, data: Partial<BaserowRow>): Promise<BaserowRow> {
-    return baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/${rowId}/`, {
+    return baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/${rowId}/?user_field_names=true`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
