@@ -106,10 +106,13 @@ export const baserow = {
 
   // Create a new row
   async createRow(data: Partial<BaserowRow>): Promise<BaserowRow> {
-    return baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/`, {
+    console.log('Creating row with data:', JSON.stringify(data, null, 2));
+    const result = await baserowFetch<BaserowRow>(`/database/rows/table/${BASEROW_TABLE_ID}/`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    console.log('Row created:', JSON.stringify(result, null, 2));
+    return result;
   },
 
   // Update a row

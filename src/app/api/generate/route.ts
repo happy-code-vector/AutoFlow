@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
       validated.provider as AIProvider
     );
 
+    // Debug: log AI response
+    console.log('AI generated story:', story.substring(0, 200) + '...');
+    console.log('AI generated tasks:', JSON.stringify(tasks, null, 2));
+
     // Create project title
     const projectTitle = validated.projectTitle ||
       story.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').trim() ||
@@ -52,8 +56,18 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    // Debug: log what we're sending to Baserow
+    console.log('Sending to Baserow:', JSON.stringify(baserowTasks, null, 2));
+
     // Create all tasks in Baserow
-    const createdRows = await baserow.createRows(baserowTasks);
+    let createdRows;
+    try {
+      createdRows = await baserow.createRows(baserowTasks);
+      console.log('Baserow response:', JSON.stringify(createdRows, null, 2));
+    } catch (baserowError) {
+      console.error('Baserow create error:', baserowError);
+      throw baserowError;
+    }
 
     // Update dependencies - now that we have the actual IDs
     for (let i = 0; i < tasks.length; i++) {
