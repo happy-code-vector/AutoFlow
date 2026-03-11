@@ -48,22 +48,22 @@ export interface Task {
   updatedAt: string;
 }
 
-// Baserow API types
+// Baserow API types - field names MUST match Baserow column names exactly
 export interface BaserowRow {
   id: number;
   order: string;
-  // Existing fields
+  // Existing fields (from CSV template)
   ID?: string;
   'VEO Prompt'?: string;
   'Image URL'?: string;
   'Image Prompt'?: string;
   'Imagegen Reference'?: string;
-  'Video_URL'?: string;
+  Video_URL?: string;  // Note: underscore, not space
   Status?: TaskStatus;
   Mode?: string;
   'Start Frame'?: string;
   'End Frame'?: string;
-  // New fields
+  // New fields for project management (ADD THESE TO BASEROW)
   project_title?: string;
   task_order?: number;
   step_type?: TaskType;

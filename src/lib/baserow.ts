@@ -38,7 +38,7 @@ export function rowToTask(row: BaserowRow): Task {
     imagePrompt: row['Image Prompt'],
     imageUrl: row['Image URL'],
     imagegenReference: row['Imagegen Reference'],
-    videoUrl: row['Video_URL'],
+    videoUrl: row.Video_URL,  // Fixed: underscore not space
     status: row.Status || 'pending',
     mode: row.Mode,
     startFrame: row['Start Frame'],
@@ -60,7 +60,7 @@ export function taskToRow(task: Partial<Omit<Task, 'id'>>): Partial<BaserowRow> 
   if (task.imagePrompt !== undefined) row['Image Prompt'] = task.imagePrompt;
   if (task.imageUrl !== undefined) row['Image URL'] = task.imageUrl;
   if (task.imagegenReference !== undefined) row['Imagegen Reference'] = task.imagegenReference;
-  if (task.videoUrl !== undefined) row['Video_URL'] = task.videoUrl;
+  if (task.videoUrl !== undefined) row.Video_URL = task.videoUrl;  // Fixed: underscore not space
   if (task.status !== undefined) row.Status = task.status;
   if (task.mode !== undefined) row.Mode = task.mode;
   if (task.startFrame !== undefined) row['Start Frame'] = task.startFrame;
