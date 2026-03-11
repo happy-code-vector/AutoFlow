@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import type { NextAuthOptions } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 declare module 'next-auth' {
@@ -64,6 +65,6 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-export const auth = handler.auth;
+export const auth = () => getServerSession(authOptions);
 export const signIn = handler.signIn;
 export const signOut = handler.signOut;
