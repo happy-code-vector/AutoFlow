@@ -8,7 +8,7 @@ import { z } from 'zod';
 const generateSchema = z.object({
   input: z.string().min(10, 'Input must be at least 10 characters'),
   contentType: z.enum(['documentary', 'general', 'custom']).default('general'),
-  provider: z.enum(['openai', 'gemini', 'groq']).default('openai'),
+  provider: z.enum(['openai', 'gemini', 'groq', 'claude']).default('claude'),
   projectTitle: z.string().optional(),
 });
 
