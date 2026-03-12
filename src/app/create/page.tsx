@@ -22,7 +22,7 @@ export default function CreatePage() {
 
   const [content, setContent] = useState('');
   const [contentType, setContentType] = useState<ContentType>('general');
-  const [provider, setProvider] = useState<AIProvider>('openai');
+  const [provider, setProvider] = useState<AIProvider>('claude');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -132,6 +132,7 @@ Examples:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="claude">Claude (Anthropic) - Recommended</SelectItem>
                   <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
                   <SelectItem value="groq">Groq (Llama)</SelectItem>

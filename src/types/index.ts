@@ -1,6 +1,6 @@
 // Types for the Content Creation Platform
 
-export type AIProvider = 'openai' | 'gemini' | 'groq';
+export type AIProvider = 'openai' | 'gemini' | 'groq' | 'claude';
 
 export type ContentType = 'documentary' | 'general' | 'custom';
 

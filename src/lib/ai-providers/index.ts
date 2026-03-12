@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../env';
 import type { AIProvider, ContentType, Task, TaskType } from '@/types';
 
@@ -14,6 +15,29 @@ interface GenerateResult {
   }>;
 }
 
+// Historical Documentary Producer System Prompt
+const HISTORICAL_DOCUMENTARY_SKILL = `You are the Historical Documentary Producer for "Before Time Had a Name" — a historical documentary YouTube channel covering human history from the Stone Age through the medieval world using AI-generated video (VEO 3.1, Seedance 2.0, Kling), AI images (Midjourney v6.1), and real B-roll footage.
+
+## Production Mix Philosophy
+- B-Roll (real footage): ~50% - Establishing shots, landscapes, artifact close-ups
+- AI Still Images (held + Ken Burns): ~30% - Historically specific scenes
+- AI Video Clips: ~20% - Motion scenes that require historical specificity
+
+## Target runtime: 8–10 minutes
+
+## Character System
+Every episode with named recurring human subjects uses this reference hierarchy:
+- CR-1: Primary character full body (generate first, always)
+- CR-2: Primary character face close-up (Kling seeding reference)
+- CR-3: Secondary character full body
+- CR-4: Secondary character face close-up
+- CR-5: Tertiary character (if present)
+
+## Tool Assignment
+- VEO 3.1 Flow: Wide shots, environments, camera movement, action
+- Kling: Any scene where a named character's face must be consistent
+- Seedance 2.0: Long continuous motion sequences, crowd scenes`;
+
 const STORY_DETECTION_PROMPT = `Analyze the following input and determine if it is:
 1. A full story/narrative (detailed plot with characters, scenes, and structure)
 2. A simple idea/concept (brief description or topic that needs to be expanded)
@@ -22,7 +46,7 @@ Input: {INPUT}
 
 Respond with only "STORY" or "IDEA".`;
 
-const IDEA_TO_STORY_PROMPT = `You are a creative story writer. Transform the following idea into a compelling narrative for visual content creation.
+const IDEA_TO_STORY_PROMPT = `You are a creative story writer for historical documentaries. Transform the following idea into a compelling narrative for visual content creation.
 
 Idea: {INPUT}
 
@@ -30,11 +54,12 @@ Create a story that:
 - Has a clear beginning, middle, and end
 - Describes visual scenes that can be illustrated
 - Includes emotional moments and dramatic beats
-- Is suitable for video/image content
+- Is historically grounded and educational
+- Suitable for AI-generated video/image content
 
 Write the story (300-500 words):`;
 
-const STORY_TO_TASKS_PROMPT = `You are a content production assistant. Analyze the following story and generate a production plan with specific image and video generation prompts.
+const STORY_TO_TASKS_PROMPT = `You are a content production assistant for historical documentaries. Analyze the following story and generate a production plan with specific image and video generation prompts.
 
 Story:
 {STORY}
@@ -46,10 +71,11 @@ Generate a JSON array of tasks. Each task should be:
 - For videos: { "type": "video", "prompt": "detailed prompt for AI video generation", "dependsOnImage": null or index of reference image }
 
 Guidelines:
-- Create 5-8 image prompts for key scenes (detailed, cinematic, specific lighting)
+- Create 5-8 image prompts for key scenes (detailed, cinematic, historically accurate lighting)
 - Create 2-4 video prompts for motion scenes (character actions, environment transitions)
 - Video prompts that need a reference image should reference the image by its index
-- Prompts should be production-ready for Midjourney/DALL-E (images) or VEO/Kling (videos)
+- Prompts should be production-ready for Midjourney (images) or VEO/Kling (videos)
+- Include era-appropriate visual details (costumes, architecture, landscapes)
 
 Output ONLY valid JSON array, no markdown:
 [{"type": "image", "prompt": "..."}, ...]`;
@@ -119,6 +145,27 @@ export async function generateWithGroq(
   return data.choices[0]?.message?.content || '';
 }
 
+export async function generateWithClaude(
+  input: string,
+  systemPrompt: string
+): Promise<string> {
+  const anthropic = new Anthropic({
+    apiKey: env.ANTHROPIC_API_KEY,
+  });
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [
+      { role: 'user', content: input },
+    ],
+  });
+
+  const textBlock = response.content.find(block => block.type === 'text');
+  return textBlock ? textBlock.text : '';
+}
+
 async function generate(
   input: string,
   systemPrompt: string,
@@ -131,6 +178,8 @@ async function generate(
       return generateWithGemini(input, systemPrompt);
     case 'groq':
       return generateWithGroq(input, systemPrompt);
+    case 'claude':
+      return generateWithClaude(input, systemPrompt);
     default:
       throw new Error(`Unsupported AI provider: ${provider}`);
   }
@@ -226,5 +275,9 @@ export const aiProviders = {
   groq: {
     name: 'Groq (Llama)',
     generate: generateWithGroq,
+  },
+  claude: {
+    name: 'Claude (Anthropic)',
+    generate: generateWithClaude,
   },
 };
