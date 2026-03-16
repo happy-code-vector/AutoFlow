@@ -5,8 +5,8 @@ import { baserow } from '@/lib/baserow';
 /**
  * GET /api/tasks/check-dependencies
  * Checks for waiting video tasks whose dependencies are completed
- * Collects ALL completed image URLs from the same project (with lower order)
- * and updates their status to pending with reference images in Image URL field
+ * Handles multiple dependencies (depends_on_task_ids)
+ * Collects ALL completed image URLs from dependencies
  */
 export async function GET() {
   try {
@@ -24,42 +24,73 @@ export async function GET() {
       row => row.Status === 'waiting' && row.step_type === 'video'
     );
 
-    const updatedTasks: number[] = [];
+    const updatedTasks: { id: number; referenceCount: number }[] = [];
+    const skippedTasks: { id: number; reason: string }[] = [];
 
     for (const videoTask of waitingTasks) {
-      // Find all completed image tasks in the same project with lower order
-      const projectImages = allTasks.filter(
-        row =>
-          row.project_title === videoTask.project_title &&
-          row.step_type === 'image' &&
-          row.Status === 'completed' &&
-          row['Image URL'] &&
-          (row.task_order || 0) < (videoTask.task_order || 0)
-      );
+      let dependencyIds: number[] = [];
 
-      // Check if the specific dependency (if any) is completed
-      if (videoTask.depends_on_task_id) {
-        const dependency = allTasks.find(row => row.id === videoTask.depends_on_task_id);
-        if (!dependency || dependency.Status !== 'completed' || !dependency['Image URL']) {
-          // Dependency not ready, skip this task
-          continue;
-        }
+      // Parse multiple dependencies if present
+      if (videoTask.depends_on_task_ids) {
+        dependencyIds = videoTask.depends_on_task_ids
+          .split(',')
+          .map(Number)
+          .filter(Boolean);
+      } else if (videoTask.depends_on_task_id) {
+        // Single dependency fallback
+        dependencyIds = [videoTask.depends_on_task_id];
       }
 
-      // Collect all image URLs (comma-separated as per documentation)
-      const imageUrls = projectImages
-        .map(img => img['Image URL'])
-        .filter(Boolean)
-        .join(',');
+      // Check if all dependencies are completed
+      if (dependencyIds.length > 0) {
+        const dependencies = dependencyIds.map(id =>
+          allTasks.find(row => row.id === id)
+        );
 
-      if (imageUrls) {
-        // Update the video task with reference images and set to pending
+        const allReady = dependencies.every(
+          dep => dep && dep.Status === 'completed' && dep['Image URL']
+        );
+
+        if (!allReady) {
+          const missingDeps = dependencies
+            .filter(dep => !dep || dep.Status !== 'completed' || !dep['Image URL'])
+            .map((dep, i) => dep ? `ID ${dep.id}` : `ID ${dependencyIds[i]}`);
+
+          skippedTasks.push({
+            id: videoTask.id,
+            reason: `Dependencies not ready: ${missingDeps.join(', ')}`,
+          });
+          continue;
+        }
+
+        // Collect image URLs from specific dependencies only
+        const imageUrls = dependencies
+          .filter((dep): dep is NonNullable<typeof dep> => dep !== undefined)
+          .map(dep => dep['Image URL'])
+          .filter(Boolean)
+          .join(',');
+
+        if (imageUrls) {
+          await baserow.updateRow(videoTask.id, {
+            Status: 'pending',
+            'Imagegen Reference': imageUrls,  // Use Imagegen Reference for the reference images
+          });
+          updatedTasks.push({
+            id: videoTask.id,
+            referenceCount: dependencies.length,
+          });
+          console.log(`Updated video task ${videoTask.id} with ${dependencies.length} reference images`);
+        }
+      } else {
+        // No dependencies - just set to pending
         await baserow.updateRow(videoTask.id, {
           Status: 'pending',
-          'Image URL': imageUrls,  // Comma-separated reference images
         });
-        updatedTasks.push(videoTask.id);
-        console.log(`Updated video task ${videoTask.id} with ${projectImages.length} reference images`);
+        updatedTasks.push({
+          id: videoTask.id,
+          referenceCount: 0,
+        });
+        console.log(`Updated video task ${videoTask.id} to pending (no dependencies)`);
       }
     }
 
@@ -67,7 +98,9 @@ export async function GET() {
       success: true,
       checked: waitingTasks.length,
       updated: updatedTasks.length,
-      updatedTaskIds: updatedTasks,
+      skipped: skippedTasks.length,
+      updatedTasks,
+      skippedTasks,
     });
   } catch (error) {
     console.error('Check dependencies error:', error);

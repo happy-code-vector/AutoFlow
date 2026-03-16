@@ -1,5 +1,5 @@
 import { env } from './env';
-import type { BaserowRow, BaserowListResponse, Task, TaskStatus, TaskType } from '@/types';
+import type { BaserowRow, BaserowListResponse, Task, TaskStatus, TaskType, AssetType, ToolType } from '@/types';
 
 const BASEROW_API_URL = env.BASEROW_API_URL;
 const BASEROW_TABLE_ID = env.BASEROW_TABLE_ID;
@@ -34,25 +34,42 @@ export function rowToTask(row: BaserowRow): Task {
     projectId: row.project_title || '',
     order: row.task_order || 0,
     stepType: row.step_type || 'image',
+    // Hybrid approach fields
+    assetType: row.asset_type,
+    tool: row.tool,
+    characterName: row.character_name,
+    sceneContext: {
+      timePeriod: row.scene_time_period || '',
+      location: row.scene_location || '',
+      visualStyle: row.scene_visual_style || '',
+      characters: [],
+    },
+    // Legacy fields
     veoPrompt: row['VEO Prompt'],
     imagePrompt: row['Image Prompt'],
     imageUrl: row['Image URL'],
     imagegenReference: row['Imagegen Reference'],
-    videoUrl: row.Video_URL,  // Fixed: underscore not space
+    videoUrl: row.Video_URL,
     status: row.Status || 'pending',
     mode: row.Mode,
     startFrame: row['Start Frame'],
     endFrame: row['End Frame'],
     dependsOnTaskId: row.depends_on_task_id ? String(row.depends_on_task_id) : undefined,
+    dependsOnTaskIds: row.depends_on_task_ids?.split(',').map(Number).filter(Boolean),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 }
 
 // Convert Task to Baserow row format
-export function taskToRow(task: Partial<Omit<Task, 'id'>>): Partial<BaserowRow> {
+export function taskToRow(task: Partial<Omit<Task, 'id'>> & {
+  assetType?: AssetType;
+  tool?: ToolType;
+  characterName?: string;
+}): Partial<BaserowRow> {
   const row: Partial<BaserowRow> = {};
 
+  // Standard fields
   if (task.projectId !== undefined) row.project_title = task.projectId;
   if (task.order !== undefined) row.task_order = task.order;
   if (task.stepType !== undefined) row.step_type = task.stepType;
@@ -60,13 +77,26 @@ export function taskToRow(task: Partial<Omit<Task, 'id'>>): Partial<BaserowRow> 
   if (task.imagePrompt !== undefined) row['Image Prompt'] = task.imagePrompt;
   if (task.imageUrl !== undefined) row['Image URL'] = task.imageUrl;
   if (task.imagegenReference !== undefined) row['Imagegen Reference'] = task.imagegenReference;
-  if (task.videoUrl !== undefined) row.Video_URL = task.videoUrl;  // Fixed: underscore not space
+  if (task.videoUrl !== undefined) row.Video_URL = task.videoUrl;
   if (task.status !== undefined) row.Status = task.status;
   if (task.mode !== undefined) row.Mode = task.mode;
   if (task.startFrame !== undefined) row['Start Frame'] = task.startFrame;
   if (task.endFrame !== undefined) row['End Frame'] = task.endFrame;
   if (task.dependsOnTaskId !== undefined) {
     row.depends_on_task_id = parseInt(task.dependsOnTaskId, 10);
+  }
+  if (task.dependsOnTaskIds !== undefined) {
+    row.depends_on_task_ids = task.dependsOnTaskIds.join(',');
+  }
+
+  // Hybrid approach fields
+  if (task.assetType !== undefined) row.asset_type = task.assetType;
+  if (task.tool !== undefined) row.tool = task.tool;
+  if (task.characterName !== undefined) row.character_name = task.characterName;
+  if (task.sceneContext) {
+    if (task.sceneContext.timePeriod) row.scene_time_period = task.sceneContext.timePeriod;
+    if (task.sceneContext.location) row.scene_location = task.sceneContext.location;
+    if (task.sceneContext.visualStyle) row.scene_visual_style = task.sceneContext.visualStyle;
   }
 
   return row;
